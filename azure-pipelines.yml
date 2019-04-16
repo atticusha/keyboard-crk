@@ -4,6 +4,7 @@ trigger:
 variables:
   CODE_SIGN_ID: 'Developer ID Installer: The University of Tromso (2K5J2584NX)'
 
+jobs:
 - job: 'macOS'
   pool:
     vmImage: 'macOS-10.14'
