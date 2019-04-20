@@ -697,8 +697,8 @@ longpress:
   č: x
   o: ø ö
 strings:
-  space: gaska
-  return: linnjámolsun
+  space: space
+  return: return
 space:
   mac:
     alt: '\u{A0}'
