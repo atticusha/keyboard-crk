@@ -35,3 +35,40 @@ jobs:
     inputs:
       pathtoPublish: '$(System.DefaultWorkingDirectory)/crk.kbdgen/Plains Cree Keyboards 0.1.0.pkg'
       artifactName: crk-keyboard-macos.pkg
+- job: 'Windows'
+  pool:
+    vmImage: 'vs2017-win2016'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.7'
+      addToPath: true
+  - bash: |
+      curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
+      git clone --branch feature/new-format https://github.com/divvun/kbdgen.git || exit 1
+      git clone https://github.com/divvun/divvun-ci-config.git || exit 1
+      openssl aes-256-cbc -d -in ./divvun-ci-config/config.txz.enc -pass pass:$DIVVUN_KEY -out config.txz -md md5 || exit 1
+      7z e config.txz || exit 1
+      tar xf config.tar || exit 1
+      curl -o 6aa798a39c.zip https://x.brendan.so/6aa798a39c.zip || exit 1
+      7z x 6aa798a39c.zip || exit 1
+    displayName: 'Install prerequisites'
+    env:
+      DIVVUN_KEY: $(divvunKey)
+  - powershell: |
+      $Env:PATH += $Env:USERPROFILE + "\.poetry\bin;"
+      $Env:CODESIGN_PFX = "$(System.DefaultWorkingDirectory)\enc\creds\windows\divvun.pfx"
+      $Env:MSKLC_PATH = "$(System.DefaultWorkingDirectory)\msklc1.4"
+      $env:VIRTUAL_ENV_DISABLE_PROMPT="true"
+      python -m venv $Env:USERPROFILE\env\py3
+      Invoke-Expression -Command $Env:USERPROFILE\env\py3\Scripts\Activate.ps1
+      cd kbdgen
+      poetry install
+      kbdgen -R -t win ..\crk.kbdgen --logging trace
+    displayName: 'Run kbdgen'
+    env:
+      CODESIGN_PW: $(pfxPassword)
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(System.DefaultWorkingDirectory)/kbdgen/Plains_Cree_Keyboards_0.1.2.exe'
+      artifactName: installer-win.exe
