@@ -34,7 +34,7 @@ jobs:
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(System.DefaultWorkingDirectory)/crk.kbdgen/Plains Cree Keyboards 0.1.0.pkg'
-      artifactName: crk-keyboard-macos.pkg
+      artifactName: macos
 - job: 'Windows'
   pool:
     vmImage: 'vs2017-win2016'
@@ -71,4 +71,41 @@ jobs:
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(System.DefaultWorkingDirectory)/kbdgen/Plains_Cree_Keyboards_0.1.2.exe'
-      artifactName: installer-win.exe
+      artifactName: windows
+- job: 'Android'
+  pool:
+    vmImage: 'ubuntu-16.04'
+  container: bitbleep/kbdgen-android:0.1
+  steps:
+  - script: |
+      curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python3
+      curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+      source $HOME/.cargo/env
+      rustup target add aarch64-linux-android
+      rustup target add armv7-linux-androideabi
+      rustup target add i686-linux-android
+      cargo install cargo-ndk
+      git clone --branch feature/new-format https://github.com/divvun/kbdgen.git
+      git clone https://github.com/divvun/divvun-ci-config.git
+      cd divvun-ci-config
+      openssl aes-256-cbc -d -in config.txz.enc -pass pass:$DIVVUN_KEY -md md5 | tar xfJ -
+      cp -R enc/creds $HOME
+    displayName: 'Install prerequisites'
+    env:
+      DIVVUN_KEY: $(divvunKey)
+  - script: |
+      source $HOME/.cargo/env
+      source $HOME/.poetry/env
+      python3 -m venv $HOME/env/py3
+      source $HOME/env/py3/bin/activate
+      source divvun-ci-config/enc/env.sh
+      cd kbdgen
+      poetry install
+      cd ../crk.kbdgen
+      kbdgen -R -t android -o output --github-username $GITHUB_USERNAME --github-token $GITHUB_TOKEN --logging=debug .
+      ls output
+    displayName: 'Run kbdgen'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(System.DefaultWorkingDirectory)/crk.kbdgen/output/.-0.1.0_release.apk'
+      artifactName: android
