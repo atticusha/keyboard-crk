@@ -72,6 +72,32 @@ jobs:
     inputs:
       pathtoPublish: '$(System.DefaultWorkingDirectory)/kbdgen/Plains_Cree_Keyboards_0.1.2.exe'
       artifactName: windows
+- job: 'iOS'
+  pool:
+    vmImage: 'macOS-10.14'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.7'
+      addToPath: true
+  - script: |
+      curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
+      git clone --branch feature/new-format https://github.com/divvun/kbdgen.git
+      git clone https://github.com/divvun/divvun-ci-config.git
+      cd divvun-ci-config
+      sh ./install-macos.sh
+    displayName: 'Install prerequisites'
+    env:
+      DIVVUN_KEY: $(divvunKey)
+  - script: |
+      python -m venv $HOME/env/py3
+      source $HOME/env/py3/bin/activate
+      source $HOME/.poetry/env
+      source divvun-ci-config/enc/env.sh
+      cd kbdgen
+      poetry install
+      cd ../crk.kbdgen
+      kbdgen -t ios -o output  --github-username $GITHUB_USERNAME --github-token $GITHUB_TOKEN --logging=debug .
 - job: 'Android'
   pool:
     vmImage: 'ubuntu-16.04'
